@@ -5,7 +5,8 @@
       "Bash(chmod +x:*)",
       "Bash(bash:*)",
       "Bash(open:*)",
-      "Bash(pgrep:*)"
+      "Bash(pgrep:*)",
+      "Bash(sips:*)"
     ]
   }
 }

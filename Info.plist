@@ -18,6 +18,8 @@
     <string>APPL</string>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <!-- Hide from Dock; show only in menu bar -->
     <key>LSUIElement</key>
     <true/>

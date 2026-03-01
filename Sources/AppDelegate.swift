@@ -117,7 +117,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func setupStatusBar() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = statusItem.button {
-            let img = NSImage(systemSymbolName: "play.rectangle.fill",
+            let img = NSImage(systemSymbolName: "play.display",
                               accessibilityDescription: "DyWallpaper")
             img?.isTemplate = true
             button.image = img

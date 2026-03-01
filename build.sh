@@ -36,6 +36,51 @@ swiftc \
     -framework Combine \
     -Onone
 
+echo "==> 產生 App Icon..."
+# Scale icon to 82% of canvas (Chrome-like padding) using a temporary Swift script
+ICON_TMP=$(mktemp /tmp/App_Icon_padded_XXXX.png)
+swift - "$ICON_TMP" <<'SWIFT'
+import AppKit
+let dstPath = CommandLine.arguments[1]
+let srcPath = "Sources/App_Icon.png"
+guard let srcImage = NSImage(contentsOfFile: srcPath) else {
+    fputs("Error: cannot load \(srcPath)\n", stderr); exit(1)
+}
+let canvas = 1024
+let scale  = 0.82
+let size   = Int(Double(canvas) * scale)
+let offset = (canvas - size) / 2
+let result = NSImage(size: NSSize(width: canvas, height: canvas))
+result.lockFocus()
+NSColor.clear.set()
+NSRect(x: 0, y: 0, width: canvas, height: canvas).fill()
+srcImage.draw(in: NSRect(x: offset, y: offset, width: size, height: size),
+              from: .zero, operation: .copy, fraction: 1.0)
+result.unlockFocus()
+guard let tiff   = result.tiffRepresentation,
+      let bitmap = NSBitmapImageRep(data: tiff),
+      let png    = bitmap.representation(using: .png, properties: [:]) else {
+    fputs("Error: cannot encode PNG\n", stderr); exit(1)
+}
+try! png.write(to: URL(fileURLWithPath: dstPath))
+SWIFT
+
+ICONSET_DIR=$(mktemp -d)/AppIcon.iconset
+mkdir -p "${ICONSET_DIR}"
+sips -z 16   16   "${ICON_TMP}" --out "${ICONSET_DIR}/icon_16x16.png"      > /dev/null
+sips -z 32   32   "${ICON_TMP}" --out "${ICONSET_DIR}/icon_16x16@2x.png"   > /dev/null
+sips -z 32   32   "${ICON_TMP}" --out "${ICONSET_DIR}/icon_32x32.png"      > /dev/null
+sips -z 64   64   "${ICON_TMP}" --out "${ICONSET_DIR}/icon_32x32@2x.png"   > /dev/null
+sips -z 128  128  "${ICON_TMP}" --out "${ICONSET_DIR}/icon_128x128.png"    > /dev/null
+sips -z 256  256  "${ICON_TMP}" --out "${ICONSET_DIR}/icon_128x128@2x.png" > /dev/null
+sips -z 256  256  "${ICON_TMP}" --out "${ICONSET_DIR}/icon_256x256.png"    > /dev/null
+sips -z 512  512  "${ICON_TMP}" --out "${ICONSET_DIR}/icon_256x256@2x.png" > /dev/null
+sips -z 512  512  "${ICON_TMP}" --out "${ICONSET_DIR}/icon_512x512.png"    > /dev/null
+sips -z 1024 1024 "${ICON_TMP}" --out "${ICONSET_DIR}/icon_512x512@2x.png" > /dev/null
+iconutil -c icns "${ICONSET_DIR}" -o "${APP_BUNDLE}/Contents/Resources/AppIcon.icns"
+rm -f "${ICON_TMP}"
+rm -rf "$(dirname "${ICONSET_DIR}")"
+
 echo "==> 複製 Info.plist..."
 cp Info.plist "${APP_BUNDLE}/Contents/Info.plist"
 
