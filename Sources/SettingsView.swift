@@ -15,7 +15,6 @@ struct SettingsView: View {
         Form {
             videoSection
             displaySection
-            lockScreenSection
             performanceSection
             audioSection
             generalSection
@@ -75,27 +74,6 @@ struct SettingsView: View {
                 .foregroundStyle(.secondary)
         }
     }
-
-    private var lockScreenSection: some View {
-        Section {
-            Toggle(isOn: $settings.showOnLockScreen) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("在鎖定畫面顯示")
-                    Text("螢幕保護程式啟動時，影片取代系統螢幕保護程式；手動鎖定時影片持續播放，解鎖後立即恢復")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            if settings.showOnLockScreen {
-                Text("提示：前往「系統設定 → 螢幕保護程式」選擇任意螢幕保護程式，並設定啟動時間，即可在螢幕保護程式期間看到影片播放。")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        } header: {
-            Label("鎖定畫面", systemImage: "lock.fill")
-        }
-    }
-
     private var performanceSection: some View {
         Section {
             Picker("最高幀率", selection: $settings.frameRateCap) {

@@ -27,13 +27,6 @@ final class AppSettings: ObservableObject {
     }
     var videoGravity: AVLayerVideoGravity { .init(rawValue: videoGravityRaw) }
 
-    // MARK: - Lock Screen
-
-    /// When true, video keeps playing while the screen is locked (shows through the lock screen blur).
-    @Published var showOnLockScreen: Bool = false {
-        didSet { save(showOnLockScreen, key: .showOnLockScreen) }
-    }
-
     // MARK: - Performance
 
     /// Frames per second cap. 0 = no cap (use video's native frame rate).
@@ -55,7 +48,7 @@ final class AppSettings: ObservableObject {
     // MARK: - Keys
 
     enum Key: String {
-        case lastVideoPath, isMuted, volume, videoGravityRaw, frameRateCap, optimizeResolution, showOnLockScreen
+        case lastVideoPath, isMuted, volume, videoGravityRaw, frameRateCap, optimizeResolution
     }
 
     // MARK: - Helpers
@@ -74,7 +67,6 @@ final class AppSettings: ObservableObject {
         isMuted            = load(.isMuted,            default: true)
         volume             = load(.volume,             default: 0.8)
         videoGravityRaw    = load(.videoGravityRaw,    default: AVLayerVideoGravity.resizeAspectFill.rawValue)
-        showOnLockScreen   = load(.showOnLockScreen,   default: false)
         frameRateCap       = load(.frameRateCap,       default: 30)
         optimizeResolution = load(.optimizeResolution, default: true)
     }

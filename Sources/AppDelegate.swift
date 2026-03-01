@@ -11,8 +11,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Counts overlapping system-pause events (sleep, lock, screensaver…).
     /// Playback resumes only when it reaches zero again.
     private var systemPauseCount = 0
-    /// Tracks whether windows are currently elevated to screensaver level.
-    private var isElevatedForScreensaver = false
     private var cancellables = Set<AnyCancellable>()
 
     private var settings: AppSettings { .shared }
@@ -109,38 +107,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if systemPauseCount == 0 { wallpaperWindows.forEach { $0.resume() } }
     }
 
-    /// Screen lock/unlock: skip pause/resume when "show on lock screen" is enabled.
-    @objc private func handleScreenLocked() {
-        guard !settings.showOnLockScreen else { return }
-        handleSystemPause()
-    }
-
-    @objc private func handleScreenUnlocked() {
-        guard !settings.showOnLockScreen else { return }
-        handleSystemResume()
-    }
-
-    /// Screensaver start: elevate windows above the system screensaver and keep playing;
-    /// otherwise treat as a normal pause event.
-    @objc private func handleScreensaverStart() {
-        if settings.showOnLockScreen {
-            isElevatedForScreensaver = true
-            wallpaperWindows.forEach { $0.elevateToScreensaverLevel() }
-        } else {
-            handleSystemPause()
-        }
-    }
-
-    /// Screensaver stop: lower windows back to desktop level;
-    /// otherwise treat as a normal resume event.
-    @objc private func handleScreensaverStop() {
-        if isElevatedForScreensaver {
-            isElevatedForScreensaver = false
-            wallpaperWindows.forEach { $0.lowerToDesktopLevel() }
-        } else {
-            handleSystemResume()
-        }
-    }
+    @objc private func handleScreenLocked() { handleSystemPause() }
+    @objc private func handleScreenUnlocked() { handleSystemResume() }
+    @objc private func handleScreensaverStart() { handleSystemPause() }
+    @objc private func handleScreensaverStop() { handleSystemResume() }
 
     // MARK: - Status Bar
 
@@ -284,7 +254,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         clearWindows()
         for screen in NSScreen.screens {
             let win = WallpaperWindow(screen: screen)
-            if isElevatedForScreensaver { win.elevateToScreensaverLevel() }
             win.play(url: url)
             wallpaperWindows.append(win)
         }

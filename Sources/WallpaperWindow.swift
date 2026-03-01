@@ -185,17 +185,6 @@ final class WallpaperWindow: NSWindow {
         }
     }
 
-    /// Raise to one level above the system screensaver so the video is visible during screensaver.
-    func elevateToScreensaverLevel() {
-        level = NSWindow.Level(rawValue: NSWindow.Level.screenSaver.rawValue + 1)
-        orderFront(nil)
-    }
-
-    /// Lower back to the normal desktop level.
-    func lowerToDesktopLevel() {
-        level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopWindow)))
-    }
-
     func pause() { player?.pause() }
     func resume() { player?.play() }
 
