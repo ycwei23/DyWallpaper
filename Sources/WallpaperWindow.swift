@@ -41,6 +41,15 @@ final class WallpaperWindow: NSWindow {
         set { player?.volume = newValue }
     }
 
+    private var currentSpeed: Float = 1.0
+    var playbackSpeed: Float {
+        get { currentSpeed }
+        set {
+            currentSpeed = newValue
+            if let player, player.rate > 0 { player.rate = newValue }
+        }
+    }
+
     // MARK: Init
 
     init(screen: NSScreen) {
@@ -78,6 +87,7 @@ final class WallpaperWindow: NSWindow {
         stop()
 
         let s = AppSettings.shared
+        currentSpeed = Float(s.playbackSpeed)
         let item = AVPlayerItem(url: url)
         // Hint to AVFoundation: don't decode above screen resolution (helps for HLS/adaptive)
         item.preferredMaximumResolution = targetScreen.frame.size
@@ -102,8 +112,9 @@ final class WallpaperWindow: NSWindow {
             object: item,
             queue: .main
         ) { [weak self] _ in
-            self?.player?.seek(to: .zero)
-            self?.player?.play()
+            guard let self else { return }
+            self.player?.seek(to: .zero)
+            self.player?.rate = self.currentSpeed
         }
 
         let playerView = PlayerView(frame: frame)
@@ -111,7 +122,7 @@ final class WallpaperWindow: NSWindow {
         contentView = playerView
 
         orderFront(nil)
-        p.play()
+        p.rate = currentSpeed
     }
 
     /// Updates the videoGravity of the running player layer immediately.
@@ -186,7 +197,7 @@ final class WallpaperWindow: NSWindow {
     }
 
     func pause() { player?.pause() }
-    func resume() { player?.play() }
+    func resume() { player?.rate = currentSpeed }
 
     func toggleMute() {
         player?.isMuted = !(player?.isMuted ?? true)

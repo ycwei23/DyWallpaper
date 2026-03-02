@@ -67,6 +67,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             .store(in: &cancellables)
 
+        // Playback speed — apply immediately to all running players
+        settings.$playbackSpeed
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] speed in
+                self?.wallpaperWindows.forEach { $0.playbackSpeed = Float(speed) }
+            }
+            .store(in: &cancellables)
+
         // Frame rate / resolution cap — re-apply composition if playing
         Publishers.Merge(
             settings.$frameRateCap.dropFirst().map { _ in () },

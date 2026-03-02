@@ -137,6 +137,26 @@ struct Loc {
         }
     }
 
+    var playbackSpeed: String {
+        switch lang {
+        case .english:            return "Playback Speed"
+        case .traditionalChinese: return "播放速度"
+        case .simplifiedChinese:  return "播放速度"
+        case .japanese:           return "再生速度"
+        case .korean:             return "재생 속도"
+        }
+    }
+
+    var playbackSpeedNormal: String {
+        switch lang {
+        case .english:            return "Normal"
+        case .traditionalChinese: return "正常"
+        case .simplifiedChinese:  return "正常"
+        case .japanese:           return "標準"
+        case .korean:             return "기본"
+        }
+    }
+
     // MARK: - Display Section
 
     var fillMode: String {

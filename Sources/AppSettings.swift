@@ -38,6 +38,13 @@ final class AppSettings: ObservableObject {
         didSet { save(optimizeResolution, key: .optimizeResolution) }
     }
 
+    // MARK: - Playback
+
+    /// Playback speed multiplier. 1.0 = normal speed.
+    @Published var playbackSpeed: Double = 1.0 {
+        didSet { save(playbackSpeed, key: .playbackSpeed) }
+    }
+
     // MARK: - Language
 
     @Published var language: Language = .english {
@@ -54,7 +61,7 @@ final class AppSettings: ObservableObject {
     // MARK: - Keys
 
     enum Key: String {
-        case lastVideoPath, isMuted, volume, videoGravityRaw, frameRateCap, optimizeResolution, language
+        case lastVideoPath, isMuted, volume, videoGravityRaw, frameRateCap, optimizeResolution, playbackSpeed, language
     }
 
     // MARK: - Helpers
@@ -75,6 +82,7 @@ final class AppSettings: ObservableObject {
         videoGravityRaw    = load(.videoGravityRaw,    default: AVLayerVideoGravity.resizeAspectFill.rawValue)
         frameRateCap       = load(.frameRateCap,       default: 30)
         optimizeResolution = load(.optimizeResolution, default: true)
+        playbackSpeed      = load(.playbackSpeed,      default: 1.0)
         language           = Language(rawValue: load(.language, default: Language.english.rawValue)) ?? .english
     }
 }

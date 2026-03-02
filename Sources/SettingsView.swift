@@ -54,6 +54,15 @@ struct SettingsView: View {
                 }
                 Spacer()
             }
+
+            Picker(loc.playbackSpeed, selection: $settings.playbackSpeed) {
+                Text("0.25×").tag(0.25)
+                Text("0.5×").tag(0.5)
+                Text("0.75×").tag(0.75)
+                Text("1×  (\(loc.playbackSpeedNormal))").tag(1.0)
+                Text("1.5×").tag(1.5)
+                Text("2×").tag(2.0)
+            }
         } header: {
             Label(loc.sectionVideo, systemImage: "film")
         }
