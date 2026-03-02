@@ -26,7 +26,8 @@ struct SettingsView: View {
             .formStyle(.grouped)
             .fixedSize(horizontal: false, vertical: true)
         }
-        .frame(width: 420, height: 560)
+        .frame(width: SettingsLayout.windowSize.width,
+               height: SettingsLayout.windowSize.height)
     }
 
     // MARK: - Sections
@@ -113,7 +114,7 @@ struct SettingsView: View {
 
     private var audioSection: some View {
         Section {
-            Toggle(loc.mute, isOn: $settings.isMuted)
+            Toggle(loc.menuMute, isOn: $settings.isMuted)
 
             if !settings.isMuted {
                 HStack(spacing: 6) {

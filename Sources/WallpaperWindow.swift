@@ -7,10 +7,10 @@ import AVFoundation
 final class PlayerView: NSView {
     private(set) var playerLayer: AVPlayerLayer?
 
-    func setup(player: AVPlayer) {
+    func setup(player: AVPlayer, videoGravity: AVLayerVideoGravity) {
         wantsLayer = true
         let layer = AVPlayerLayer(player: player)
-        layer.videoGravity = AppSettings.shared.videoGravity
+        layer.videoGravity = videoGravity
         layer.frame = bounds
         self.layer?.addSublayer(layer)
         self.playerLayer = layer
@@ -98,12 +98,17 @@ final class WallpaperWindow: NSWindow {
         p.allowsExternalPlayback = false  // skip AirPlay/HDMI routing overhead
         self.player = p
 
-        // Apply frame-rate cap + resolution reduction in the background.
-        // Video starts immediately at full settings; composition kicks in after track info loads.
+        // Capture settings values before crossing the async boundary to avoid
+        // reading @Published properties from a non-main-actor context.
+        let frameRateCap = s.frameRateCap
+        let optimizeResolution = s.optimizeResolution
         let screenSize = targetScreen.frame.size
         Task { [weak self, weak item, weak p] in
             guard let self, let item, let p else { return }
-            await self.applyPowerOptimizations(to: item, player: p, screenSize: screenSize)
+            await self.applyPowerOptimizations(
+                to: item, player: p, screenSize: screenSize,
+                frameRateCap: frameRateCap, optimizeResolution: optimizeResolution
+            )
         }
 
         // Loop on end
@@ -117,8 +122,9 @@ final class WallpaperWindow: NSWindow {
             self.player?.rate = self.currentSpeed
         }
 
+        let videoGravity = s.videoGravity
         let playerView = PlayerView(frame: frame)
-        playerView.setup(player: p)
+        playerView.setup(player: p, videoGravity: videoGravity)
         contentView = playerView
 
         orderFront(nil)
@@ -131,13 +137,17 @@ final class WallpaperWindow: NSWindow {
     }
 
     /// Loads video track metadata then applies two GPU optimisations via AVMutableVideoComposition:
-    ///   1. Frame rate capped (per AppSettings.frameRateCap)
-    ///   2. Render size capped at screen point resolution (when optimizeResolution is enabled)
+    ///   1. Frame rate capped (per frameRateCap parameter)
+    ///   2. Render size capped at screen point resolution (when optimizeResolution is true)
+    ///
+    /// Thread safety: settings values are captured on the main thread before calling this method.
+    /// The `item == player.currentItem` guard prevents a stale async operation from corrupting
+    /// a newer playback session if `play(url:)` is called again before this completes.
     private func applyPowerOptimizations(to item: AVPlayerItem,
                                          player: AVPlayer,
-                                         screenSize: CGSize) async {
-        let s = AppSettings.shared
-
+                                         screenSize: CGSize,
+                                         frameRateCap: Int,
+                                         optimizeResolution: Bool) async {
         guard let track = try? await item.asset.loadTracks(withMediaType: .video).first else { return }
 
         async let sizeTask    = track.load(.naturalSize)
@@ -147,15 +157,18 @@ final class WallpaperWindow: NSWindow {
         let transform   = (try? await tfmTask)  ?? .identity
         let nativeFPS   = (try? await fpsTask)  ?? 30
 
-        // Account for 90° / 270° rotation (portrait videos shot on iPhone etc.)
+        // Account for 90deg / 270deg rotation (portrait videos shot on iPhone etc.)
         let isRotated = (transform.a == 0 && transform.d == 0)
         let videoSize = isRotated
             ? CGSize(width: naturalSize.height, height: naturalSize.width)
             : naturalSize
 
+        // Guard against corrupt files reporting zero dimensions
+        guard videoSize.width > 0, videoSize.height > 0 else { return }
+
         // Determine render size
         let scale: CGFloat
-        if s.optimizeResolution {
+        if optimizeResolution {
             scale = min(screenSize.width  / videoSize.width,
                         screenSize.height / videoSize.height,
                         1.0)
@@ -165,9 +178,10 @@ final class WallpaperWindow: NSWindow {
         let renderSize = CGSize(width:  (videoSize.width  * scale).rounded(),
                                 height: (videoSize.height * scale).rounded())
 
-        // Determine frame rate cap
-        let capFPS = s.frameRateCap > 0 ? Float(s.frameRateCap) : nativeFPS
-        let timescale = CMTimeScale(capFPS.rounded())
+        // Determine frame rate cap; clamp to AVFoundation's practical maximum
+        let capFPS = frameRateCap > 0 ? Float(frameRateCap) : nativeFPS
+        let clampedFPS = min(capFPS.rounded(), 600)
+        let timescale = CMTimeScale(max(clampedFPS, 1))
 
         // Skip composition entirely if no optimisation is needed
         let noResChange = scale >= 1.0
@@ -198,10 +212,6 @@ final class WallpaperWindow: NSWindow {
 
     func pause() { player?.pause() }
     func resume() { player?.rate = currentSpeed }
-
-    func toggleMute() {
-        player?.isMuted = !(player?.isMuted ?? true)
-    }
 
     func stop() {
         if let obs = loopObserver {

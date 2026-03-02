@@ -26,8 +26,5 @@
     <!-- Minimum macOS version -->
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
-    <!-- Privacy description for reading local files -->
-    <key>NSAppleEventsUsageDescription</key>
-    <string>DyWallpaper 需要存取影片檔案來設定桌面背景。</string>
 </dict>
 </plist>

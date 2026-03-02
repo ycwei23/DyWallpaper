@@ -268,7 +268,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Playback
 
     func apply(url: URL) {
-        settings.lastVideoPath = url.path
+        settings.saveLastVideoBookmark(for: url)
         settings.currentVideoURL = url
         clearWindows()
         for screen in NSScreen.screens {
@@ -281,10 +281,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func autoResumeLastVideo() {
-        let path = settings.lastVideoPath
-        guard !path.isEmpty else { return }
-        let url = URL(fileURLWithPath: path)
-        guard FileManager.default.fileExists(atPath: url.path) else { return }
+        guard let url = settings.resolveLastVideoURL() else { return }
         settings.currentVideoURL = url
         apply(url: url)
     }

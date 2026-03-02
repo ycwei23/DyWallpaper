@@ -51,17 +51,40 @@ final class AppSettings: ObservableObject {
         didSet { save(language.rawValue, key: .language) }
     }
 
-    // MARK: - Last video path (plain read/write, not @Published)
+    // MARK: - Last video bookmark (persists file reference across relaunches)
 
-    var lastVideoPath: String {
-        get { UserDefaults.standard.string(forKey: Key.lastVideoPath.rawValue) ?? "" }
-        set { UserDefaults.standard.set(newValue, forKey: Key.lastVideoPath.rawValue) }
+    /// Stores the last played video URL as bookmark data, which survives file moves
+    /// better than a plain path string.
+    func saveLastVideoBookmark(for url: URL) {
+        if let data = try? url.bookmarkData(options: [], includingResourceValuesForKeys: nil, relativeTo: nil) {
+            UserDefaults.standard.set(data, forKey: Key.lastVideoBookmark.rawValue)
+        }
+        // Keep a plain path as fallback for older persisted data
+        UserDefaults.standard.set(url.path, forKey: Key.lastVideoPath.rawValue)
+    }
+
+    /// Resolves the last played video URL from bookmark data, falling back to a plain path.
+    func resolveLastVideoURL() -> URL? {
+        // Try bookmark data first
+        if let data = UserDefaults.standard.data(forKey: Key.lastVideoBookmark.rawValue) {
+            var isStale = false
+            if let url = try? URL(resolvingBookmarkData: data, options: [], relativeTo: nil, bookmarkDataIsStale: &isStale) {
+                if isStale { saveLastVideoBookmark(for: url) }
+                if FileManager.default.fileExists(atPath: url.path) { return url }
+            }
+        }
+        // Fall back to plain path (migrates from older versions)
+        let path = UserDefaults.standard.string(forKey: Key.lastVideoPath.rawValue) ?? ""
+        guard !path.isEmpty else { return nil }
+        let url = URL(fileURLWithPath: path)
+        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
+        return url
     }
 
     // MARK: - Keys
 
     enum Key: String {
-        case lastVideoPath, isMuted, volume, videoGravityRaw, frameRateCap, optimizeResolution, playbackSpeed, language
+        case lastVideoPath, lastVideoBookmark, isMuted, volume, videoGravityRaw, frameRateCap, optimizeResolution, playbackSpeed, language
     }
 
     // MARK: - Helpers
