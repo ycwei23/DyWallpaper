@@ -14,19 +14,19 @@ struct SettingsView: View {
     private var loc: Loc { Loc(settings.language) }
 
     var body: some View {
-        Form {
-            videoSection
-            displaySection
-            performanceSection
-            audioSection
-            generalSection
-            languageSection
+        ScrollView(.vertical, showsIndicators: true) {
+            Form {
+                videoSection
+                displaySection
+                performanceSection
+                audioSection
+                generalSection
+                languageSection
+            }
+            .formStyle(.grouped)
+            .fixedSize(horizontal: false, vertical: true)
         }
-        .formStyle(.grouped)
-        // Fix the width; let SwiftUI calculate the height so NSHostingController
-        // reports a non-zero preferredContentSize to NSWindow.
-        .frame(width: 420)
-        .fixedSize(horizontal: false, vertical: true)
+        .frame(width: 420, height: 560)
     }
 
     // MARK: - Sections

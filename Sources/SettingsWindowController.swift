@@ -13,6 +13,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         window.styleMask = [.titled, .closable, .miniaturizable]
         window.setFrameAutosaveName("DyWallpaperSettings")
         window.isReleasedWhenClosed = false
+        // Lock content size to match the fixed SwiftUI frame.
+        let fixedSize = NSSize(width: 420, height: 560)
+        window.contentMinSize = fixedSize
+        window.contentMaxSize = fixedSize
 
         super.init(window: window)
         window.delegate = self
