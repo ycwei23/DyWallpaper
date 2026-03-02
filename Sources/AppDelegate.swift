@@ -32,6 +32,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Settings observation (Combine)
 
     private func observeSettings() {
+        // Language — rebuild menu with new strings
+        settings.$language
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.rebuildMenu() }
+            .store(in: &cancellables)
+
         // Mute — apply immediately to all running players
         settings.$isMuted
             .dropFirst()
@@ -127,6 +134,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func rebuildMenu() {
+        let loc = Loc(settings.language)
         let menu = NSMenu()
 
         let titleItem = NSMenuItem(title: "DyWallpaper", action: nil, keyEquivalent: "")
@@ -143,29 +151,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             menu.addItem(.separator())
         }
 
-        menu.addItem(NSMenuItem(title: "選擇影片…",
+        menu.addItem(NSMenuItem(title: loc.menuSelectVideo,
                                 action: #selector(selectVideo), keyEquivalent: "o"))
 
         // Resume when stopped but a last-played file exists
         if wallpaperWindows.isEmpty, let url = settings.currentVideoURL {
-            let item = NSMenuItem(title: "重新播放：\(url.lastPathComponent)",
+            let item = NSMenuItem(title: "\(loc.menuResumePrefix)\(url.lastPathComponent)",
                                   action: #selector(resumeLastVideo), keyEquivalent: "r")
             menu.addItem(item)
         }
 
         if !wallpaperWindows.isEmpty {
-            let muteTitle = settings.isMuted ? "取消靜音" : "靜音"
+            let muteTitle = settings.isMuted ? loc.menuUnmute : loc.menuMute
             menu.addItem(NSMenuItem(title: muteTitle,
                                     action: #selector(toggleMute), keyEquivalent: "m"))
-            menu.addItem(NSMenuItem(title: "停止播放",
+            menu.addItem(NSMenuItem(title: loc.menuStopPlayback,
                                     action: #selector(stopWallpaper), keyEquivalent: "s"))
         }
 
         menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "偏好設定…",
+        menu.addItem(NSMenuItem(title: loc.menuPreferences,
                                 action: #selector(openSettings), keyEquivalent: ","))
         menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "結束 DyWallpaper",
+        menu.addItem(NSMenuItem(title: loc.menuQuit,
                                 action: #selector(quit), keyEquivalent: "q"))
 
         for item in menu.items { item.target = self }
@@ -175,9 +183,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Actions
 
     @objc func selectVideo() {
+        let loc = Loc(settings.language)
         let panel = NSOpenPanel()
-        panel.title = "選擇要當作桌面背景的影片"
-        panel.prompt = "設為桌面背景"
+        panel.title = loc.panelTitle
+        panel.prompt = loc.panelPrompt
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
         var types: [UTType] = [.movie, .video, .mpeg4Movie, .quickTimeMovie]
@@ -216,9 +225,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 try service.register()
             }
         } catch {
+            let loc = Loc(settings.language)
             let alert = NSAlert()
-            alert.messageText = "無法設定開機自動啟動"
-            alert.informativeText = "請確認 App 已安裝到 /Applications 資料夾。\n\n錯誤：\(error.localizedDescription)"
+            alert.messageText = loc.alertLoginItemTitle
+            alert.informativeText = loc.alertLoginItemMessage + loc.alertLoginItemErrorPrefix + error.localizedDescription
             alert.alertStyle = .warning
             NSApp.activate(ignoringOtherApps: true)
             alert.runModal()

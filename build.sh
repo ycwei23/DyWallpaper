@@ -19,6 +19,7 @@ echo "==> 編譯 Swift 原始碼..."
 swiftc \
     Sources/main.swift \
     Sources/AppSettings.swift \
+    Sources/Localization.swift \
     Sources/AppDelegate.swift \
     Sources/WallpaperWindow.swift \
     Sources/SettingsView.swift \

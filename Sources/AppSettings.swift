@@ -38,6 +38,12 @@ final class AppSettings: ObservableObject {
         didSet { save(optimizeResolution, key: .optimizeResolution) }
     }
 
+    // MARK: - Language
+
+    @Published var language: Language = .english {
+        didSet { save(language.rawValue, key: .language) }
+    }
+
     // MARK: - Last video path (plain read/write, not @Published)
 
     var lastVideoPath: String {
@@ -48,7 +54,7 @@ final class AppSettings: ObservableObject {
     // MARK: - Keys
 
     enum Key: String {
-        case lastVideoPath, isMuted, volume, videoGravityRaw, frameRateCap, optimizeResolution
+        case lastVideoPath, isMuted, volume, videoGravityRaw, frameRateCap, optimizeResolution, language
     }
 
     // MARK: - Helpers
@@ -69,5 +75,6 @@ final class AppSettings: ObservableObject {
         videoGravityRaw    = load(.videoGravityRaw,    default: AVLayerVideoGravity.resizeAspectFill.rawValue)
         frameRateCap       = load(.frameRateCap,       default: 30)
         optimizeResolution = load(.optimizeResolution, default: true)
+        language           = Language(rawValue: load(.language, default: Language.english.rawValue)) ?? .english
     }
 }

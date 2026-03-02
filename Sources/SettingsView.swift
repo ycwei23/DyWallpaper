@@ -11,6 +11,8 @@ struct SettingsView: View {
     let onResumePlayback: () -> Void
     let onToggleLogin:    () -> Void
 
+    private var loc: Loc { Loc(settings.language) }
+
     var body: some View {
         Form {
             videoSection
@@ -18,6 +20,7 @@ struct SettingsView: View {
             performanceSection
             audioSection
             generalSection
+            languageSection
         }
         .formStyle(.grouped)
         // Fix the width; let SwiftUI calculate the height so NSHostingController
@@ -30,77 +33,78 @@ struct SettingsView: View {
 
     private var videoSection: some View {
         Section {
-            LabeledContent("目前影片") {
+            LabeledContent(loc.currentVideo) {
                 if let url = settings.currentVideoURL {
                     Text(url.lastPathComponent)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .truncationMode(.middle)
                 } else {
-                    Text("尚未選擇")
+                    Text(loc.noVideoSelected)
                         .foregroundStyle(.tertiary)
                 }
             }
 
             HStack(spacing: 8) {
-                Button("選擇影片…", action: onSelectVideo)
+                Button(loc.selectVideo, action: onSelectVideo)
                 if settings.isPlaying {
-                    Button("停止播放", role: .destructive, action: onStopPlayback)
+                    Button(loc.stopPlayback, role: .destructive, action: onStopPlayback)
                 } else if settings.currentVideoURL != nil {
-                    Button("重新播放", action: onResumePlayback)
+                    Button(loc.resumePlayback, action: onResumePlayback)
                 }
                 Spacer()
             }
         } header: {
-            Label("影片", systemImage: "film")
+            Label(loc.sectionVideo, systemImage: "film")
         }
     }
 
     private var displaySection: some View {
         Section {
-            Picker("填充方式", selection: $settings.videoGravityRaw) {
-                Text("填滿（超出範圍裁切）")
+            Picker(loc.fillMode, selection: $settings.videoGravityRaw) {
+                Text(loc.fillAspectFill)
                     .tag(AVLayerVideoGravity.resizeAspectFill.rawValue)
-                Text("等比縮放（邊緣保留黑邊）")
+                Text(loc.fillAspectFit)
                     .tag(AVLayerVideoGravity.resizeAspect.rawValue)
-                Text("拉伸填滿（不保持比例）")
+                Text(loc.fillStretch)
                     .tag(AVLayerVideoGravity.resize.rawValue)
             }
             .pickerStyle(.radioGroup)
         } header: {
-            Label("顯示", systemImage: "display")
+            Label(loc.sectionDisplay, systemImage: "display")
         } footer: {
-            Text("設定後立即生效。")
+            Text(loc.displayFooter)
                 .foregroundStyle(.secondary)
         }
     }
+
     private var performanceSection: some View {
         Section {
-            Picker("最高幀率", selection: $settings.frameRateCap) {
-                Text("24 fps（省電，電影風格）").tag(24)
-                Text("30 fps（平衡）").tag(30)
-                Text("60 fps（流暢）").tag(60)
-                Text("不限制（影片原始幀率）").tag(0)
+            Picker(loc.maxFrameRate, selection: $settings.frameRateCap) {
+                Text(loc.fps24).tag(24)
+                Text(loc.fps30).tag(30)
+                Text(loc.fps60).tag(60)
+                Text(loc.fpsUnlimited).tag(0)
             }
 
-            Toggle("依螢幕解析度限制渲染", isOn: $settings.optimizeResolution)
+            Toggle(loc.optimizeResolutionLabel, isOn: $settings.optimizeResolution)
 
             if settings.optimizeResolution {
-                Text("將解碼解析度上限設為螢幕大小，大幅降低 4K 影片的 GPU 使用量。")
+                Text(loc.optimizeResolutionDesc)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
         } header: {
-            Label("效能", systemImage: "bolt")
+            Label(loc.sectionPerformance, systemImage: "bolt")
         } footer: {
-            Text("幀率與解析度設定在下次播放影片時生效。")
+            Text(loc.performanceFooter)
                 .foregroundStyle(.secondary)
         }
     }
 
     private var audioSection: some View {
         Section {
-            Toggle("靜音", isOn: $settings.isMuted)
+            Toggle(loc.mute, isOn: $settings.isMuted)
 
             if !settings.isMuted {
                 HStack(spacing: 6) {
@@ -118,7 +122,7 @@ struct SettingsView: View {
                 }
             }
         } header: {
-            Label("音訊", systemImage: "speaker.wave.2")
+            Label(loc.sectionAudio, systemImage: "speaker.wave.2")
         }
     }
 
@@ -129,14 +133,26 @@ struct SettingsView: View {
                 set:  { _ in onToggleLogin() }
             )) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("開機自動啟動")
-                    Text("需要 App 已安裝於 /Applications 資料夾")
+                    Text(loc.launchAtLogin)
+                    Text(loc.launchAtLoginNote)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             }
         } header: {
-            Label("一般", systemImage: "gearshape")
+            Label(loc.sectionGeneral, systemImage: "gearshape")
+        }
+    }
+
+    private var languageSection: some View {
+        Section {
+            Picker(loc.sectionLanguage, selection: $settings.language) {
+                ForEach(Language.allCases, id: \.self) { lang in
+                    Text(lang.displayName).tag(lang)
+                }
+            }
+        } header: {
+            Label(loc.sectionLanguage, systemImage: "globe")
         }
     }
 }
