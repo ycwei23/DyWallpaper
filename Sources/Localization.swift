@@ -289,27 +289,15 @@ struct Loc {
     var performanceFooter: String {
         switch lang {
         case .english:
-            return "Frame rate and resolution settings take effect on next video play."
+            return "Frame rate and resolution settings take effect immediately by restarting playback."
         case .traditionalChinese:
-            return "幀率與解析度設定在下次播放影片時生效。"
+            return "幀率與解析度設定會立即重新播放以套用變更。"
         case .simplifiedChinese:
-            return "帧率和分辨率设置在下次播放视频时生效。"
+            return "帧率和分辨率设置会立即重新播放以应用更改。"
         case .japanese:
-            return "フレームレートと解像度の設定は次の動画再生時に適用されます。"
+            return "フレームレートと解像度の設定は再生を再開して即座に適用されます。"
         case .korean:
-            return "프레임 레이트 및 해상도 설정은 다음 동영상 재생 시 적용됩니다."
-        }
-    }
-
-    // MARK: - Audio Section
-
-    var mute: String {
-        switch lang {
-        case .english:            return "Mute"
-        case .traditionalChinese: return "靜音"
-        case .simplifiedChinese:  return "静音"
-        case .japanese:           return "ミュート"
-        case .korean:             return "음소거"
+            return "프레임 레이트 및 해상도 설정은 재생을 다시 시작하여 즉시 적용됩니다."
         }
     }
 

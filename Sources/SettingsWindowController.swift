@@ -1,26 +1,39 @@
 import AppKit
 import SwiftUI
+import Combine
+
+/// Shared layout constants for the settings window.
+enum SettingsLayout {
+    static let windowSize = NSSize(width: 420, height: 560)
+}
 
 final class SettingsWindowController: NSWindowController, NSWindowDelegate {
+    private var languageCancellable: AnyCancellable?
+
     init(settingsView: SettingsView) {
-        // NSHostingController properly reports preferredContentSize to NSWindow.
-        // NSWindow(contentViewController:) then sizes itself to match.
-        // Using NSHostingView + contentRect:.zero instead causes a 0×0 invisible window.
         let hc = NSHostingController(rootView: settingsView)
 
         let window = NSWindow(contentViewController: hc)
-        window.title = "DyWallpaper 設定"
+        let loc = Loc(AppSettings.shared.language)
+        window.title = "DyWallpaper — \(loc.menuPreferences.replacingOccurrences(of: "…", with: ""))"
         window.styleMask = [.titled, .closable, .miniaturizable]
         window.setFrameAutosaveName("DyWallpaperSettings")
         window.isReleasedWhenClosed = false
-        // Lock content size to match the fixed SwiftUI frame.
-        let fixedSize = NSSize(width: 420, height: 560)
-        window.contentMinSize = fixedSize
-        window.contentMaxSize = fixedSize
+        window.contentMinSize = SettingsLayout.windowSize
+        window.contentMaxSize = SettingsLayout.windowSize
 
         super.init(window: window)
         window.delegate = self
         window.center()
+
+        // Update window title when language changes
+        languageCancellable = AppSettings.shared.$language
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] lang in
+                let loc = Loc(lang)
+                self?.window?.title = "DyWallpaper — \(loc.menuPreferences.replacingOccurrences(of: "…", with: ""))"
+            }
     }
 
     required init?(coder: NSCoder) { fatalError() }
@@ -30,6 +43,9 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         window?.makeKeyAndOrderFront(nil)
     }
 
-    // Keep the controller alive; just hide when the user closes the window.
+    // The window closes normally when the user clicks the close button.
+    // The controller stays alive because isReleasedWhenClosed = false and
+    // AppDelegate holds the settingsWindowController reference, preserving
+    // the window's autosaved position for next open.
     func windowWillClose(_ notification: Notification) {}
 }

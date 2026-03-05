@@ -7,15 +7,26 @@ APP_BUNDLE="${BUILD_DIR}/${APP_NAME}.app"
 BINARY="${APP_BUNDLE}/Contents/MacOS/${APP_NAME}"
 INSTALL_PATH="/Applications/${APP_NAME}.app"
 SDK=$(xcrun --show-sdk-path)
+ENTITLEMENTS="DyWallpaper.entitlements"
 
-echo "==> 清除舊的建置..."
+# Build configuration: pass "debug" as first argument for unoptimised build
+BUILD_CONFIG="${1:-release}"
+if [ "$BUILD_CONFIG" = "debug" ]; then
+    OPT_FLAG="-Onone"
+    echo "==> Build mode: DEBUG (no optimisation)"
+else
+    OPT_FLAG="-O"
+    echo "==> Build mode: RELEASE (whole-module optimisation)"
+fi
+
+echo "==> Cleaning old build..."
 rm -rf "${BUILD_DIR}"
 
-echo "==> 建立 App Bundle 結構..."
+echo "==> Creating App Bundle structure..."
 mkdir -p "${APP_BUNDLE}/Contents/MacOS"
 mkdir -p "${APP_BUNDLE}/Contents/Resources"
 
-echo "==> 編譯 Swift 原始碼..."
+echo "==> Compiling Swift sources..."
 swiftc \
     Sources/main.swift \
     Sources/AppSettings.swift \
@@ -35,9 +46,9 @@ swiftc \
     -framework ServiceManagement \
     -framework SwiftUI \
     -framework Combine \
-    -Onone
+    ${OPT_FLAG}
 
-echo "==> 產生 App Icon..."
+echo "==> Generating App Icon..."
 # Scale icon to 82% of canvas (Chrome-like padding) using a temporary Swift script
 ICON_TMP=$(mktemp /tmp/App_Icon_padded_XXXX.png)
 swift - "$ICON_TMP" <<'SWIFT'
@@ -82,24 +93,32 @@ iconutil -c icns "${ICONSET_DIR}" -o "${APP_BUNDLE}/Contents/Resources/AppIcon.i
 rm -f "${ICON_TMP}"
 rm -rf "$(dirname "${ICONSET_DIR}")"
 
-echo "==> 複製 Info.plist..."
+echo "==> Copying Info.plist..."
 cp Info.plist "${APP_BUNDLE}/Contents/Info.plist"
 
-echo "==> 簽署 App（ad-hoc）..."
-codesign --force --deep --sign - "${APP_BUNDLE}" 2>/dev/null || true
+echo "==> Signing App (ad-hoc)..."
+if [ -f "${ENTITLEMENTS}" ]; then
+    if ! codesign --force --deep --sign - --entitlements "${ENTITLEMENTS}" "${APP_BUNDLE}"; then
+        echo "WARNING: ad-hoc signing failed. The app may be blocked by Gatekeeper." >&2
+    fi
+else
+    if ! codesign --force --deep --sign - "${APP_BUNDLE}"; then
+        echo "WARNING: ad-hoc signing failed. The app may be blocked by Gatekeeper." >&2
+    fi
+fi
 
-echo "==> 安裝到 /Applications..."
+echo "==> Installing to /Applications..."
 rm -rf "${INSTALL_PATH}"
 cp -R "${APP_BUNDLE}" "${INSTALL_PATH}"
 
 # Restart if already running
 if pgrep -x "${APP_NAME}" > /dev/null; then
-    echo "==> 重新啟動 App..."
+    echo "==> Restarting app..."
     pkill -x "${APP_NAME}" || true
     sleep 0.5
 fi
 open "${INSTALL_PATH}"
 
 echo ""
-echo "✅ 安裝完成：${INSTALL_PATH}"
-echo "   App 已在選單列啟動。"
+echo "Done! Installed to: ${INSTALL_PATH}"
+echo "The app is now running in the menu bar."
