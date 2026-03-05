@@ -8,10 +8,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var wallpaperWindows: [WallpaperWindow] = []
     private var settingsWindowController: SettingsWindowController?
 
-    /// Counts overlapping system-pause events (sleep, lock, screensaver…).
-    /// Playback resumes only when it reaches zero again.
-    private var systemPauseCount = 0
+    /// Tracks individual pause sources separately to avoid counter drift from
+    /// asymmetric macOS notifications (e.g. willSleep fires but didWake fires late).
+    private var isSleeping = false
+    private var isScreenLocked = false
+    private var isScreensaverActive = false
     private var cancellables = Set<AnyCancellable>()
+
+    private var shouldBePaused: Bool { isSleeping || isScreenLocked || isScreensaverActive }
 
     private var settings: AppSettings { .shared }
 
@@ -114,19 +118,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func handleSystemPause() {
-        systemPauseCount += 1
-        if systemPauseCount == 1 { wallpaperWindows.forEach { $0.pause() } }
+        let wasPaused = shouldBePaused
+        isSleeping = true
+        if !wasPaused { wallpaperWindows.forEach { $0.pause() } }
     }
 
     @objc private func handleSystemResume() {
-        systemPauseCount = max(0, systemPauseCount - 1)
-        if systemPauseCount == 0 { wallpaperWindows.forEach { $0.resume() } }
+        isSleeping = false
+        if !shouldBePaused { wallpaperWindows.forEach { $0.resume() } }
     }
 
-    @objc private func handleScreenLocked() { handleSystemPause() }
-    @objc private func handleScreenUnlocked() { handleSystemResume() }
-    @objc private func handleScreensaverStart() { handleSystemPause() }
-    @objc private func handleScreensaverStop() { handleSystemResume() }
+    @objc private func handleScreenLocked() {
+        let wasPaused = shouldBePaused
+        isScreenLocked = true
+        if !wasPaused { wallpaperWindows.forEach { $0.pause() } }
+    }
+
+    @objc private func handleScreenUnlocked() {
+        isScreenLocked = false
+        if !shouldBePaused { wallpaperWindows.forEach { $0.resume() } }
+    }
+
+    @objc private func handleScreensaverStart() {
+        let wasPaused = shouldBePaused
+        isScreensaverActive = true
+        if !wasPaused { wallpaperWindows.forEach { $0.pause() } }
+    }
+
+    @objc private func handleScreensaverStop() {
+        isScreensaverActive = false
+        if !shouldBePaused { wallpaperWindows.forEach { $0.resume() } }
+    }
 
     // MARK: - Status Bar
 

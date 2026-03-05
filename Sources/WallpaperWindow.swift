@@ -41,6 +41,7 @@ final class WallpaperWindow: NSWindow {
         set { player?.volume = newValue }
     }
 
+    private var stallObserver: NSObjectProtocol?
     private var currentSpeed: Float = 1.0
     var playbackSpeed: Float {
         get { currentSpeed }
@@ -111,15 +112,32 @@ final class WallpaperWindow: NSWindow {
             )
         }
 
-        // Loop on end
+        // Loop on end — seek must complete before rate is set to avoid black frames
         loopObserver = NotificationCenter.default.addObserver(
             forName: .AVPlayerItemDidPlayToEndTime,
             object: item,
             queue: .main
         ) { [weak self] _ in
             guard let self else { return }
-            self.player?.seek(to: .zero)
-            self.player?.rate = self.currentSpeed
+            self.player?.seek(to: .zero, completionHandler: { [weak self] finished in
+                guard finished, let self else { return }
+                self.player?.rate = self.currentSpeed
+            })
+        }
+
+        // Stall recovery — local files rarely stall, but external drives / NAS can
+        stallObserver = NotificationCenter.default.addObserver(
+            forName: AVPlayerItem.playbackStalledNotification,
+            object: item,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self, let player = self.player else { return }
+            // Seek to current position to unblock the pipeline, then resume
+            let time = player.currentTime()
+            player.seek(to: time, completionHandler: { [weak self] finished in
+                guard finished, let self else { return }
+                self.player?.rate = self.currentSpeed
+            })
         }
 
         let videoGravity = s.videoGravity
@@ -206,7 +224,12 @@ final class WallpaperWindow: NSWindow {
 
         await MainActor.run {
             guard item == player.currentItem else { return }
+            // Briefly pause during composition switch to avoid a black-frame flash
+            // while AVFoundation rebuilds the rendering pipeline.
+            let wasPlaying = player.rate > 0
+            if wasPlaying { player.pause() }
             item.videoComposition = composition
+            if wasPlaying { player.rate = currentSpeed }
         }
     }
 
@@ -217,6 +240,10 @@ final class WallpaperWindow: NSWindow {
         if let obs = loopObserver {
             NotificationCenter.default.removeObserver(obs)
             loopObserver = nil
+        }
+        if let obs = stallObserver {
+            NotificationCenter.default.removeObserver(obs)
+            stallObserver = nil
         }
         player?.pause()
         player = nil
